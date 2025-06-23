@@ -1,0 +1,183 @@
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /NET/portainer/data:/data
+    environment:
+      - TZ=UTC
+    networks:
+      - NET
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=rabbitmq_user
+      - RABBITMQ_DEFAULT_PASS=doc_rabbit_pass_2025
+      - RABBITMQ_DEFAULT_VHOST=/
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - /NET/rabbitmq/data:/var/lib/rabbitmq
+    networks:
+      - NET
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - /NET/redis/data:/data
+    networks:
+      - NET
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - /NET/loki/data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - NET
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - /NET/grafana/data:/var/lib/grafana
+      - /NET/grafana/dashboards:/etc/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin2025
+    networks:
+      - NET
+    restart: unless-stopped
+
+  tesseract:
+    container_name: tesseract
+    build:
+      context: /NET/tesseract
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - /NET/uploads:/uploads
+    networks:
+      - NET
+    restart: unless-stopped
+
+  fastapi:
+    container_name: fastapi
+    build:
+      context: /NET/fastapi
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - /NET/fastapi:/app
+      - /NET/logs:/NET/logs
+      - /NET/uploads:/NET/uploads
+      - /NET/media:/NET/media
+    environment:
+      - DATABASE_URL=postgresql://postgres_user:!qDALC35N8AK@sudequamega.beget.app:5432/docmagic_fastapi_db?sslmode=disable
+      - CELERY_BROKER_URL=amqp://rabbitmq_user:doc_rabbit_pass_2025@rabbitmq:5673/
+      - CELERY_RESULT_BACKEND=rpc://
+      - TESSERACT_URL=http://tesseract:5000/ocr
+      - TZ=UTC
+      - LOG_LEVEL=INFO
+      - S3_ENDPOINT_URL=https://s3.ru1.storage.beget.cloud
+      - S3_ACCESS_KEY=AYMNYY5710F5BPGDAV7H
+      - S3_SECRET_KEY=V2NfBAU8MB2PU6fCfDJGQ7QDvJcnGimPEPxby0WI
+      - S3_BUCKET=142c8736a6df-neglectful-dogmeat
+    depends_on:
+      - rabbitmq
+      - redis
+      - loki
+      - tesseract
+    networks:
+      - NET
+    restart: unless-stopped
+
+  djangocore:
+    container_name: djangocore
+    build:
+      context: /NET/djangocore
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    volumes:
+      - /NET/djangocore:/app
+      - /NET/logs:/NET/logs
+      - /NET/uploads:/NET/uploads
+      - /NET/media:/NET/media
+      - /NET/static:/NET/static
+    environment:
+      - DATABASE_URL=postgresql://postgres_user:!qDALC35N8AK@sudequamega.beget.app:5432/docmadgic_djangocore_db?sslmode=disable
+      - CELERY_BROKER_URL=amqp://rabbitmq_user:doc_rabbit_pass_2025@rabbitmq:5673/
+      - CELERY_RESULT_BACKEND=rpc://
+      - DJANGOCORE_ALLOWED_HOSTS=djangocore,localhost,127.0.0.1,5.35.84.171
+      - DJANGOCORE_DEBUG=false
+      - DJANGO_REST_ENABLED=true
+      - FASTAPI_URL=http://fastapi:8080
+      - DJANGOREST_URL=http://djangorest:8082
+      - TZ=UTC
+      - LOG_LEVEL=INFO
+      - S3_ENDPOINT_URL=https://s3.ru1.storage.beget.cloud
+      - S3_ACCESS_KEY=AYMNYY5710F5BPGDAV7H
+      - S3_SECRET_KEY=V2NfBAU8MB2PU6fCfDJGQ7QDvJcnGimPEPxby0WI
+      - S3_BUCKET=142c8736a6df-neglectful-dogmeat
+    depends_on:
+      - rabbitmq
+      - djangorest
+    networks:
+      - NET
+    restart: unless-stopped
+
+  djangorest:
+    container_name: djangorest
+    build:
+      context: /NET/djangorest
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    volumes:
+      - /NET/djangorest:/app
+      - /NET/logs:/NET/logs
+      - /NET/uploads:/NET/uploads
+      - /NET/media:/NET/media
+      - /NET/documents:/NET/documents
+      - /NET/static:/NET/static
+    environment:
+      - DATABASE_URL=postgresql://postgres_user:!qDALC35N8AK@sudequamega.beget.app:5432/docmagic_djangorest_db?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - S3_ENDPOINT_URL=https://s3.ru1.storage.beget.cloud
+      - S3_ACCESS_KEY=AYMNYY5710F5BPGDAV7H
+      - S3_SECRET_KEY=V2NfBAU8MB2PU6fCfDJGQ7QDvJcnGimPEPxby0WI
+      - S3_BUCKET=142c8736a6df-neglectful-dogmeat
+      - JWT_SECRET_KEY=jwt-secret-docmagic2025
+      - TZ=UTC
+      - LOG_LEVEL=INFO
+    depends_on:
+      - redis
+      - loki
+    networks:
+      - NET
+    restart: unless-stopped
+
+networks:
+  NET:
+    driver: bridge
