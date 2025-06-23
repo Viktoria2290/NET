@@ -193,8 +193,12 @@ def upload_doc_api(request):
             valid_extensions = ['jpeg', 'jpg', 'png']
             if ext not in valid_extensions:
                 return JsonResponse({'error': 'Недопустимый формат файла'}, status=400)
-            file_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.name}"
-            file_path = os.path.join(settings.MEDIA_ROOT, 'uploads', file_name)
+            from werkzeug.utils import secure_filename
+            base_upload_path = os.path.join(settings.MEDIA_ROOT, 'uploads')
+            file_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secure_filename(file.name)}"
+            file_path = os.path.normpath(os.path.join(base_upload_path, file_name))
+            if not file_path.startswith(base_upload_path):
+                return JsonResponse({'error': 'Недопустимый путь файла'}, status=400)
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, 'wb') as f:
                 f.write(file.read())
