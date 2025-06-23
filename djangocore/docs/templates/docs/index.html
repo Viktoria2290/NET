@@ -1,0 +1,23 @@
+{% extends 'docs/base.html' %}
+{% block title %}Главная{% endblock %}
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Документы</h2>
+    <div class="row">
+        {% for doc in docs %}
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="/media/{{ doc.file_path }}" alt="Document {{ doc.id }}" class="card-img-top" style="height: 150px; object-fit: cover;">
+                    <div class="card-body">
+                        <p class="card-text">ID: {{ doc.id }}</p>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <p class="text-center">Документы отсутствуют</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
