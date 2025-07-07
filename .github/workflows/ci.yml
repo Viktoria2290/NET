@@ -1,0 +1,168 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  setup_services:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+      rabbitmq:
+        image: rabbitmq:3.12-management
+        ports:
+          - 5672:5672
+          - 15672:15672
+      minio:
+        image: minio/minio:latest
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        ports:
+          - 9000:9000
+          - 9001:9001
+        command: server /data --console-address ":9001"
+    steps:
+      - run: echo "Services started"
+
+  docs_test:
+    runs-on: ubuntu-latest
+    needs: setup_services
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+      rabbitmq:
+        image: rabbitmq:3.12-management
+        ports:
+          - 5672:5672
+      minio:
+        image: minio/minio:latest
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        ports:
+          - 9000:9000
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          cd docs
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests for docs
+        run: |
+          cd docs
+          python manage.py test
+        env:
+          DJANGO_SETTINGS_MODULE: docs.settings
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+          CELERY_BROKER_URL: amqp://guest:guest@localhost:5672//
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          S3_URL: http://localhost:9000
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_STORAGE_BUCKET_NAME: mybucket
+
+  logger_test:
+    runs-on: ubuntu-latest
+  needs: setup_services
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+      rabbitmq:
+        image: rabbitmq:3.12-management
+        ports:
+          - 5672:5672
+      minio:
+        image: minio/minio:latest
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        ports:
+          - 9000:9000
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          cd logger
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests for logger
+        run: |
+          cd logger
+          python manage.py test
+        env:
+          DJANGO_SETTINGS_MODULE: logger.settings
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+          CELERY_BROKER_URL: amqp://guest:guest@localhost:5672//
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          S3_URL: http://localhost:9000
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_STORAGE_BUCKET_NAME: mybucket
+
+  fastapi_run:
+    runs-on: ubuntu-latest
+    needs: setup_services
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          cd fastapi
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run FastAPI
+        run: |
+          cd fastapi
+          uvicorn main:app --host 0.0.0.0 --port 8000
+        env:
+          S3_URL: http://localhost:9000
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_STORAGE_BUCKET_NAME: mybucket
