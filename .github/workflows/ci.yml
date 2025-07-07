@@ -56,7 +56,7 @@ jobs:
           MINIO_ROOT_PASSWORD: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         volumes:
           - minio_data:/data
-        command: server /data --console-address ":9001"
+        # Убрал command, так как GitHub Actions не поддерживает его напрямую
       rabbitmq:
         image: rabbitmq:3.13-management
         ports:
@@ -69,12 +69,12 @@ jobs:
           - rabbitmq_data:/var/lib/rabbitmq
       celery:
         image: my-celery-image:latest  # Замени на реальный образ или настрой build
-        command: celery -A celery_config worker --loglevel=info
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         volumes:
           - /github/workspace/fastapi:/app
+        # Убрал command, нужно интегрировать логику в образ
       loki:
         image: grafana/loki:latest
         ports:
