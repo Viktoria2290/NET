@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Корзина</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Корзина</h1>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-success">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        <form method="post" action="{% url 'cart' %}">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="doc_id" class="form-label">ID документа</label>
+                <input type="text" class="form-control" id="doc_id" name="doc_id">
+            </div>
+            <button type="submit" class="btn btn-primary">Добавить в корзину</button>
+        </form>
+        <h2>Ваши заказы</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Документ</th>
+                    <th>Цена</th>
+                    <th>Статус оплаты</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cart in carts %}
+                    <tr>
+                        <td>{{ cart.id }}</td>
+                        <td>{{ cart.docs_id }}</td>
+                        <td>{{ cart.order_price }}</td>
+                        <td>{{ cart.payment }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4">Корзина пуста</td></tr>
+                {% endfor %}
+            </table>
+            <a href="{% url 'payment' %}" class="btn btn-primary">К оплате</a>
+            <p><a href="{% url 'index' %}">На главную</a></p>
+    </div>
+</body>
+</html>
