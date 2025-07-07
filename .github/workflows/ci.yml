@@ -93,7 +93,7 @@ jobs:
 
   logger_test:
     runs-on: ubuntu-latest
-  needs: setup_services
+    needs: setup_services
     services:
       postgres:
         image: postgres:15
